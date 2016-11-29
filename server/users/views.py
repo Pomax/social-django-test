@@ -84,11 +84,10 @@ def callback(request):
         name = userinfo['name']
         email = userinfo['email']
 
-        print name, email
-
         try:
             user = User.objects.get(email=email)
             print "found user in database based on email address."
+
         except User.DoesNotExist:
             user = User.objects.create_user(
                 username=name,
@@ -97,9 +96,6 @@ def callback(request):
                 password=random_password()
             )
             print "user not found: created user based on email address."
-
-        print "user:", user.__dict__
-
 
         return HttpResponse("login succeeded, with code: " + str(auth_code))
 
