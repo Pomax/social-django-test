@@ -27,6 +27,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['test.stuff.com', 'localhost']
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 31
+SECRET_KEY = 'Oh my god I love cake so much holy shit how amazing is cake; like, seriously?'
+
 
 # Application definition
 
@@ -49,6 +53,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+AUTH_USER_MODEL = 'users.GoogleUser'
 
 ROOT_URLCONF = 'server.urls'
 
