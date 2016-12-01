@@ -8,6 +8,7 @@ from django.http import (HttpResponse, HttpResponseNotFound)
 from django.template import loader
 from django.shortcuts import (redirect, render)
 from django.contrib.auth import login, logout
+from django.views.decorators.csrf import csrf_protect
 from apiclient.discovery import build
 
 from .models import GoogleUser
@@ -108,6 +109,7 @@ def callback(request):
 """
 Testing route for POSTing to the Django database
 """
+@csrf_protect
 def post_test(request):
     user = request.user
     csrf_token = request.POST.get('csrfmiddlewaretoken', False)
