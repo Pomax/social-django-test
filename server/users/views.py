@@ -1,11 +1,7 @@
-import random
-import string
 from httplib2 import Http
 from oauth2client import client
 
-from django.core import serializers
 from django.http import (HttpResponse, HttpResponseNotFound)
-from django.template import loader
 from django.shortcuts import (redirect, render)
 from django.contrib.auth import login, logout
 from django.views.decorators.csrf import csrf_protect
@@ -16,47 +12,71 @@ from .models import GoogleUser
 """
 The flow variable is used to run through oauth2 workflows.
 """
-flow = client.flow_from_clientsecrets(
+FLOW = client.flow_from_clientsecrets(
     # we keep the creds in a separate file that we don't check in.
     'client_secrets.json',
 
     # we want to be able to get a user's name and email
-    scope = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+    scope=' '.join([
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+    ]),
 
     # this url-to-codepath binding is set up in ./users/urls.py
-    redirect_uri = 'http://test.stuff.com:8000/oauth2callback',
+    redirect_uri='http://test.stuff.com:8000/oauth2callback',
 )
 
-"""
-Initial page with a link that lets us sign in through Google
-"""
-def index(request):
+
+def new_state_value(request):
+    """
+    Set up a random value for the session state, used in authentication validation.
+    """
+
     request.session['state'] = GoogleUser.objects.make_random_password()
+
+
+def new_nonce_value(request):
+    """
+    set a new random nonce to act as form post identifier
+    """
+
     request.session['nonce'] = GoogleUser.objects.make_random_password()
-    flow.params['state'] = request.session['state']
-    
+
+
+def index(request):
+    """
+    Initial page with a link that lets us sign in through Google
+    """
+
+    new_state_value(request)
+    new_nonce_value(request)
+
+    FLOW.params['state'] = request.session['state']
+
     return render(request, 'users/index.html', {
         'user': request.user,
-        'auth_url': flow.step1_get_authorize_url(),
+        'auth_url': FLOW.step1_get_authorize_url(),
         'nonce': request.session['nonce']
     })
 
 
-"""
-An explicit logout route.
-"""
-def forceLogout(request):
-    user=request.user
+def force_logout(request):
+    """
+    An explicit logout route.
+    """
+
+    user = request.user
     if user.is_authenticated:
         logout(request)
     return redirect("/")
 
 
-"""
-The callback route that Google will send the user to when authentication
-finishes (with successfully, or erroneously).
-"""
 def callback(request):
+    """
+    The callback route that Google will send the user to when authentication
+    finishes (with successfully, or erroneously).
+    """
+
     error = request.GET.get('error', False)
     auth_code = request.GET.get('code', False)
 
@@ -64,7 +84,7 @@ def callback(request):
         return HttpResponse("login failed: " + str(error))
 
     if auth_code is not False:
-        state = request.GET.get('state',False)
+        state = request.GET.get('state', False)
 
         if state is False:
             return HttpResponse("Questionable login: missing state value in callback.")
@@ -73,7 +93,7 @@ def callback(request):
             return HttpResponse("Questionable login: incorrect state value in callback.")
 
         # get the authenticating user's name and email address from the Google API
-        credentials = flow.step2_exchange(auth_code)
+        credentials = FLOW.step2_exchange(auth_code)
         http_auth = credentials.authorize(Http())
         service = build('oauth2', 'v2', http=http_auth)
         userinfo = service.userinfo().get().execute()
@@ -106,42 +126,54 @@ def callback(request):
 
     return HttpResponseNotFound("callback happened without an error or code query argument: wtf")
 
-"""
-Testing route for POSTing to the Django database
-"""
-@csrf_protect
-def post_test(request):
+def post_validate(request):
+    """
+    Security helper function to ensure that a post request is session, CSRF, and nonce protected
+    """
+
     user = request.user
     csrf_token = request.POST.get('csrfmiddlewaretoken', False)
     nonce = request.POST.get('nonce', False)
-    
+
     # ignore post attempts without a CSRF token
     if csrf_token is False:
-        return HttpResponseNotFound("No CSRF token in POST data.")
-    
+        return "No CSRF token in POST data."
+
     # ignore post attempts without a known form id
     if nonce is False:
-        return HttpResponseNotFound("No form identifier in POST data.")
+        return "No form identifier in POST data."
 
-    # ignore post attempts by clients that are not logged in 
+    # ignore post attempts by clients that are not logged in
     if not user.is_authenticated:
-        return HttpResponseNotFound("Anonymous posting is not supported.")
+        return "Anonymous posting is not supported."
 
     # ignore unexpected post attempts (i.e. missing the session-based unique form id)
     if nonce != request.session['nonce']:
         # invalidate the nonce entirely, so people can't retry until there's an id collision
         request.session['nonce'] = False
-        return HttpResponseNotFound("Forms cannot be auto-resubmitted (e.g. by reloading).")
+        return "Forms cannot be auto-resubmitted (e.g. by reloading)."
 
-    # invalidate the nonce, so this form cannot be resubmitted with the current id
-    request.session['nonce'] = False
+    return True
 
-    # We're finally in a position to accept this data.
 
-    context = {
-        'user': user,
-        'name': request.POST['name'],
-        'url': request.POST['url'],
-    }
+@csrf_protect
+def post_test(request):
+    """
+    Testing route for POSTing to the Django database
+    """
+    validation_result = post_validate(request)
 
-    return render(request, 'users/submissions.html', context)
+    if validation_result is True:
+        # invalidate the nonce, so this form cannot be resubmitted with the current id
+        request.session['nonce'] = False
+
+        context = {
+            'user': request.user,
+            'name': request.POST['name'],
+            'url': request.POST['url'],
+        }
+
+        return render(request, 'users/submissions.html', context)
+
+    else:
+        return HttpResponseNotFound(validation_result)
