@@ -1,3 +1,4 @@
+import os
 from httplib2 import Http
 from oauth2client import client
 
@@ -23,7 +24,7 @@ FLOW = client.flow_from_clientsecrets(
     ]),
 
     # this url-to-codepath binding is set up in ./users/urls.py
-    redirect_uri='http://test.stuff.com:8000/oauth2callback',
+    #redirect_uri=os.getenv('CURRENT_HOST', 'http://test.stuff.com:8000') + '/oauth2callback',
 )
 
 
