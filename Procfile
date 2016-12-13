@@ -1,1 +1,1 @@
-web: python manage.py makemigrations && python manage.py migrate && python manage.py runserver
+web: python generate_client_secrets.py && python manage.py makemigrations && python manage.py migrate && python manage.py runserver
