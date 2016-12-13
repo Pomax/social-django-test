@@ -1,1 +1,1 @@
-web: bootstrap.sh && run.sh
+web: python manage.py makemigrations && python manage.py migrate && python manage.py runserver
