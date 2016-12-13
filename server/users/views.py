@@ -7,7 +7,7 @@ from django.contrib.auth import login, logout
 from django.views.decorators.csrf import csrf_protect
 from apiclient.discovery import build
 
-from .models import GoogleUser
+from .models import EmailUser
 
 """
 The flow variable is used to run through oauth2 workflows.
@@ -32,7 +32,7 @@ def new_state_value(request):
     Set up a random value for the session state, used in authentication validation.
     """
 
-    request.session['state'] = GoogleUser.objects.make_random_password()
+    request.session['state'] = EmailUser.objects.make_random_password()
 
 
 def new_nonce_value(request):
@@ -40,14 +40,13 @@ def new_nonce_value(request):
     set a new random nonce to act as form post identifier
     """
 
-    request.session['nonce'] = GoogleUser.objects.make_random_password()
+    request.session['nonce'] = EmailUser.objects.make_random_password()
 
 
 def index(request):
     """
     Initial page with a link that lets us sign in through Google
     """
-
     new_state_value(request)
     new_nonce_value(request)
 
@@ -77,6 +76,14 @@ def callback(request):
     finishes (with successfully, or erroneously).
     """
 
+    if 'state' not in request.session:
+        msg = '\n'.join([
+            'ERROR: No state key found in request.session!',
+            'Are you making doubly sure your initial domain and callback domain are the same domain?'
+        ])
+        print msg
+        return HttpResponseNotFound(msg)
+
     error = request.GET.get('error', False)
     auth_code = request.GET.get('code', False)
 
@@ -103,16 +110,16 @@ def callback(request):
         try:
             # Get the db record for this user and make sure their
             # name matches what google says it should be.
-            user = GoogleUser.objects.get(email=email)
+            user = EmailUser.objects.get(email=email)
             # Just to be safe, we rebind the user's name, as this may have
             # changed since last time we saw this user.
             user.name = name
             user.save()
             print("found user in database based on email address.")
 
-        except GoogleUser.DoesNotExist:
+        except EmailUser.DoesNotExist:
             # Create a new database entry for this user.
-            user = GoogleUser.objects.create_user(
+            user = EmailUser.objects.create_user(
                 name=name,
                 email=email
             )

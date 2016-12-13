@@ -56,7 +56,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-AUTH_USER_MODEL = 'users.GoogleUser'
+AUTH_USER_MODEL = 'users.EmailUser'
 
 ROOT_URLCONF = 'server.urls'
 

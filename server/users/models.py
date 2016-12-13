@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 from django.db import models
 from django.contrib.auth.models import (BaseUserManager, AbstractBaseUser)
 
-class GoogleUserManager(BaseUserManager):
+class EmailUserManager(BaseUserManager):
     def create_user(self, name, email, password=None):
         if not name:
             raise ValueError('Users must have a name')
@@ -15,10 +15,10 @@ class GoogleUserManager(BaseUserManager):
 
         user = self.model(
             email=email,
-            name=name,
-            password=password
+            name=name
         )
-        user.save(using=self._db)
+        user.set_password(password)
+        user.save()
         return user
 
     def create_superuser(self, name, email, password):
@@ -27,11 +27,11 @@ class GoogleUserManager(BaseUserManager):
             email=email,
             password=password,
         )
-        user.is_admin = True
-        user.save(using=self._db)
+        user.is_staff = True
+        user.save()
         return user
 
-class GoogleUser(AbstractBaseUser):
+class EmailUser(AbstractBaseUser):
     # We treat the user's email address as their username
     email=models.CharField(
         verbose_name='email (acts as username)',
@@ -43,10 +43,13 @@ class GoogleUser(AbstractBaseUser):
     # as Django's User model is not useful for world users.
     name=models.CharField(max_length=1000)
 
+    # Is this user a valid Django administrator?
+    is_staff=models.BooleanField(default=False)
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name']
 
-    objects = GoogleUserManager()
+    objects = EmailUserManager()
 
     def get_full_name(self):
         return self.name + " (" + self.email + ")"
@@ -71,7 +74,3 @@ class GoogleUser(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         return True
-
-    @property
-    def is_staff(self):
-        return self.is_admin
