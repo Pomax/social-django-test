@@ -25,7 +25,7 @@ SECRET_KEY = 'h&^mb5$7*lpxyg)e4ykjez#+@@%2y_xw_qxbd3uh(%3c_3qepq'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['test.stuff.com', 'localhost']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'test.stuff.com,localhost').split(',')
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 31
