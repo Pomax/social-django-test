@@ -5,9 +5,9 @@ to read in credentials *except* from JSON source... yay!
 '''
 
 import os
-import pickle
+import json
 
-client_secrets_json = {
+client_secrets = {
   'web': {
     'client_id': os.getenv('client_id', 'no id set'),
     'client_secret': os.getenv('client_secret', 'no secret set'),
@@ -17,6 +17,8 @@ client_secrets_json = {
   }
 }
 
+data = json.dumps(client_secrets)
+
 text_file = open("client_secrets.json", "w")
-text_file.write(str(client_secrets_json))
+text_file.write(data)
 text_file.close()
