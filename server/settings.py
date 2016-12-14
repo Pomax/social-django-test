@@ -88,6 +88,10 @@ DATABASES = {
     }
 }
 
+DATABASE_URL = os.getenv('DATABASE_URL', False)
+
+if DATABASE_URL is not False:
+    DATABASES['default'].update(dj_database_url.config())
 
 # Password validation
 # https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
